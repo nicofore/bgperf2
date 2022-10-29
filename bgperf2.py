@@ -711,7 +711,6 @@ def create_output_stats(args, target_version, stats, fail=False):
 
 
 def create_ts_graph(bench_stats, stat_index=1, filename='ts.png', ylabel='%cpu', diviser=1):
-    plt.figure()
     #bench_stats.pop(0)
     data = np.array(bench_stats)
     plt.plot(data[:,0], data[:,stat_index]/diviser)
@@ -720,9 +719,9 @@ def create_ts_graph(bench_stats, stat_index=1, filename='ts.png', ylabel='%cpu',
     #plt.xlim([1, len(data)])
     plt.ylabel(ylabel)
     plt.xlabel('elapsed seconds')
-    plt.show()
+    #plt.show()
     plt.savefig(filename)
-    plt.close()
+    #plt.close()
     plt.cla()
     plt.clf()
 
