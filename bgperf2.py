@@ -179,8 +179,9 @@ def controller_idle_percent(queue):
             if stop_monitoring == True:
                 return
             utilization = check_output(['mpstat', '1' ,'1']).decode('utf-8').split('\n')[3]
-            g = re.match(r'.*all\s+.*\d+\s+(\d+\.\d+)', utilization).groups()
-            output['idle'] = float(g[0])
+            g = re.split(r'\s+', utilization)[-1].replace(",", ".")
+            #g = re.match(r'.*all\s+.*\d+\s+(\d+\.\d+)', utilization).groups()
+            output['idle'] = float(g)
             output['time'] = datetime.datetime.now()
             queue.put(output)
             # dont' sleep because mpstat is already taking 1 second to run

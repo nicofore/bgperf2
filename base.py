@@ -180,27 +180,65 @@ class Container(object):
         def stats():
             if self.stop_monitoring:
                 return
+            
+            def calculate_cpu_percent2(d, previous_cpu, previous_system):
+                cpu_percent = 0.0
+                cpu_total = float(d["cpu_stats"]["cpu_usage"]["total_usage"])
+                cpu_delta = cpu_total - previous_cpu
+                cpu_system = float(d["cpu_stats"]["system_cpu_usage"])
+                system_delta = cpu_system - previous_system
+                online_cpus = d["cpu_stats"].get("online_cpus", len(d["cpu_stats"]["cpu_usage"]["percpu_usage"]))
+                if system_delta > 0.0:
+                    cpu_percent = (cpu_delta / system_delta) * online_cpus * 100.0
+                return cpu_percent, cpu_system, cpu_total
+
+            def calculate_cpu_percent(d):
+                cpu_count = len(d["cpu_stats"]["cpu_usage"]["percpu_usage"])
+                cpu_percent = 0.0
+                cpu_delta = float(d["cpu_stats"]["cpu_usage"]["total_usage"]) - \
+                    float(d["precpu_stats"]["cpu_usage"]["total_usage"])
+                system_delta = float(d["cpu_stats"]["system_cpu_usage"]) - \
+                   float(d["precpu_stats"]["system_cpu_usage"])
+                if system_delta > 0.0:
+                    cpu_percent = cpu_delta / system_delta * 100.0 * cpu_count
+                return cpu_percent
+
+            pre_cpu_total = 0.0
+            pre_cpu_system = 0.0
+            
 
             for stat in dckr.stats(self.ctn_id, decode=True):
-                if self.stop_monitoring:
-                    return
-                cpu_percentage = 0.0
-                prev_cpu = stat['precpu_stats']['cpu_usage']['total_usage']
-                if 'system_cpu_usage' in stat['precpu_stats']:
-                    prev_system = stat['precpu_stats']['system_cpu_usage']
-                else:
-                    prev_system = 0
-                cpu = stat['cpu_stats']['cpu_usage']['total_usage']
-                system = stat['cpu_stats']['system_cpu_usage'] if 'system_cpu_usage' in stat['cpu_stats'] else 0
-                if not 'percpu_usage' in stat['cpu_stats']['cpu_usage']:
-                    continue
-                cpu_num = len(stat['cpu_stats']['cpu_usage']['percpu_usage'])
-                cpu_delta = float(cpu) - float(prev_cpu)
-                system_delta = float(system) - float(prev_system)
-                if system_delta > 0.0 and cpu_delta > 0.0:
-                    cpu_percentage = (cpu_delta / system_delta) * float(cpu_num) * 100.0
+                UsageDelta = stat['cpu_stats']['cpu_usage']['total_usage'] - pre_cpu_total
+
+                SystemDelta = stat["cpu_stats"]["system_cpu_usage"] - pre_cpu_system
+                
+                percentage = (UsageDelta / SystemDelta) * 100
+                
+                percent = round(percentage, 2)
+
+                pre_cpu_total = stat['cpu_stats']['cpu_usage']['total_usage']
+                pre_cpu_system = stat["cpu_stats"]["system_cpu_usage"]
+
+                # print(stat)
+                # if self.stop_monitoring:
+                #     return
+                # cpu_percentage = 0.0
+                # prev_cpu = stat['precpu_stats']['cpu_usage']['total_usage']
+                # if 'system_cpu_usage' in stat['precpu_stats']:
+                #     prev_system = stat['precpu_stats']['system_cpu_usage']
+                # else:
+                #     prev_system = 0
+                # cpu = stat['cpu_stats']['cpu_usage']['total_usage']
+                # system = stat['cpu_stats']['system_cpu_usage'] if 'system_cpu_usage' in stat['cpu_stats'] else 0
+                # if not 'percpu_usage' in stat['cpu_stats']['cpu_usage']:
+                #     continue
+                # cpu_num = len(stat['cpu_stats']['cpu_usage']['percpu_usage'])
+                # cpu_delta = float(cpu) - float(prev_cpu)
+                # system_delta = float(system) - float(prev_system)
+                # if system_delta > 0.0 and cpu_delta > 0.0:
+                #     cpu_percentage = (cpu_delta / system_delta) * float(cpu_num) * 100.0
                 mem_usage = stat['memory_stats'].get('usage', 0)
-                queue.put({'who': self.name, 'cpu': cpu_percentage, 'mem': mem_usage, 'time': datetime.datetime.now()})
+                queue.put({'who': self.name, 'cpu': percent, 'mem': mem_usage, 'time': datetime.datetime.now()})
 
         t = Thread(target=stats)
         t.daemon = True
