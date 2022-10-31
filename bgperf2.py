@@ -31,7 +31,7 @@ from pyroute2 import IPRoute
 from socket import AF_INET
 from nsenter import Namespace
 from psutil import virtual_memory
-from subprocess import check_output
+from subprocess import check_output, run
 import matplotlib.pyplot as plt
 import numpy as np
 from base import *
@@ -455,7 +455,18 @@ def bench(args):
             target = target_class('{0}/{1}'.format(config_dir, args.target), conf['target'], image=args.image)
         else:
             target = target_class('{0}/{1}'.format(config_dir, args.target), conf['target'])
-        target.run(conf, dckr_net_name)
+        container = target.run(conf, dckr_net_name)
+        #Get pid of container and launch perf record
+        time.sleep(2)
+        dckrInspect = check_output(['docker', 'inspect', target.CONTAINER_NAME]).decode("utf-8")
+        pid = re.search(r"(?<=\"Pid\":\s)\d+", dckrInspect)[0]
+        print("Pid of target container is {}".format(pid))
+        # def record(pid):
+        #     run(["perf", "record", "-a", "--output=test.data", "--pid=".format(pid), "sleep", "5"])
+        
+        # t = Thread(target=record, args=(pid,))
+        # t.daemon = False
+        # t.start()
 
     time.sleep(1)
 
@@ -665,7 +676,7 @@ def finish_bench(args, output_stats, bench_stats, bench_start,target, m, fail=Fa
     print()
     # it would be better to clean things up, but often I want to to investigate where things ended up
     # remove_old_containers() 
-    # remove_target_containers()
+    #remove_target_containers()
     bench_prefix = f"{args.target}_{args.tester_type}_{args.prefix_num}_{args.neighbor_num}"
     create_bench_graphs(bench_stats, prefix=bench_prefix)
     return o_s

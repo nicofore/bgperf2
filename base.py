@@ -208,16 +208,16 @@ class Container(object):
             
 
             for stat in dckr.stats(self.ctn_id, decode=True):
-                UsageDelta = stat['cpu_stats']['cpu_usage']['total_usage'] - pre_cpu_total
+                # UsageDelta = stat['cpu_stats']['cpu_usage']['total_usage'] - pre_cpu_total
 
-                SystemDelta = stat["cpu_stats"]["system_cpu_usage"] - pre_cpu_system
+                # SystemDelta = stat["cpu_stats"]["system_cpu_usage"] - pre_cpu_system
                 
-                percentage = (UsageDelta / SystemDelta) * 100
+                # percentage = (UsageDelta / SystemDelta) * 100
                 
-                percent = round(percentage, 2)
+                # percent = round(percentage, 2)
 
-                pre_cpu_total = stat['cpu_stats']['cpu_usage']['total_usage']
-                pre_cpu_system = stat["cpu_stats"]["system_cpu_usage"]
+                # pre_cpu_total = stat['cpu_stats']['cpu_usage']['total_usage']
+                # pre_cpu_system = stat["cpu_stats"]["system_cpu_usage"]
 
                 # print(stat)
                 # if self.stop_monitoring:
@@ -238,6 +238,7 @@ class Container(object):
                 # if system_delta > 0.0 and cpu_delta > 0.0:
                 #     cpu_percentage = (cpu_delta / system_delta) * float(cpu_num) * 100.0
                 mem_usage = stat['memory_stats'].get('usage', 0)
+                percent = 0
                 queue.put({'who': self.name, 'cpu': percent, 'mem': mem_usage, 'time': datetime.datetime.now()})
 
         t = Thread(target=stats)
