@@ -456,17 +456,36 @@ def bench(args):
         else:
             target = target_class('{0}/{1}'.format(config_dir, args.target), conf['target'])
         container = target.run(conf, dckr_net_name)
-        #Get pid of container and launch perf record
-        time.sleep(2)
-        dckrInspect = check_output(['docker', 'inspect', target.CONTAINER_NAME]).decode("utf-8")
-        pid = re.search(r"(?<=\"Pid\":\s)\d+", dckrInspect)[0]
-        print("Pid of target container is {}".format(pid))
-        # def record(pid):
-        #     run(["perf", "record", "-a", "--output=test.data", "--pid=".format(pid), "sleep", "5"])
+
+        time.sleep(1)
+        #Pausing container to attach perf
+        #os.system("docker pause " + target.CONTAINER_NAME)
         
-        # t = Thread(target=record, args=(pid,))
-        # t.daemon = False
-        # t.start()
+        #Getting all pid running inside container
+        dckrTop = check_output(['docker', 'top', target.CONTAINER_NAME]).decode("utf-8")
+        dckrTop = dckrTop.split("\n")
+        if target_class == FRRoutingTarget:
+            for line in range(1, len(dckrTop)-1): #Last line is empty
+                splitLine = re.split(r'\s+', dckrTop[line])
+                if splitLine[0] == 'systemd+':
+                    pid = splitLine[1]
+        elif target_class == RustyBGPTarget:
+            for line in range(1, len(dckrTop)-1): #Last line is empty
+                splitLine = re.split(r'\s+', dckrTop[line])
+                if splitLine[7] == '/root/rustybgpd':
+                    pid = splitLine[1]
+        else:
+            pid = '0'
+        print("Pid of target program is  " + pid)
+        def record(pid):
+            if pid == '0':
+                return
+            os.system("perf record --pid="+pid)
+        
+        t = Thread(target=record, args=(pid,))
+        t.daemon = False
+        t.start()
+        #os.system("docker unpause " + target.CONTAINER_NAME)
 
     time.sleep(1)
 
@@ -676,7 +695,7 @@ def finish_bench(args, output_stats, bench_stats, bench_start,target, m, fail=Fa
     print()
     # it would be better to clean things up, but often I want to to investigate where things ended up
     # remove_old_containers() 
-    #remove_target_containers()
+    # remove_target_containers()
     bench_prefix = f"{args.target}_{args.tester_type}_{args.prefix_num}_{args.neighbor_num}"
     create_bench_graphs(bench_stats, prefix=bench_prefix)
     return o_s
